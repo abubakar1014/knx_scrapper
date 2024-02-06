@@ -1,0 +1,42 @@
+{% extends 'base.html' %}  {% load static %} {% block content %}
+<section class="Form my-5 mx-5">
+  <div class="container">
+      <div class="col-lg-7 px-5 pt-5">
+        <h3><a class="nav-link" href="home">Back</a></h3>
+        <h1 class="font-weight-bold py-3">      Data from Database</h1>
+      </div>
+    <table class="table table-striped table-inverse">
+      <thead class="thead-inverse">
+        <tr>
+          <th class="pl-4">Sr.</th>
+          <th class="pl-4">Company Name</th>
+          <th class="pl-4">Owner Name</th>
+          <th class="pl-4">Address</th>
+          <th class="pl-4">Phone Number</th>
+          <th class="pl-4">Mobile Number</th>
+          <th class="pl-4">Website</th>
+          <th class="pl-4">Email</th>
+          <th class="pl-4">Location</th>
+          <th class="pl-4">Created_at</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for profile in profiles %}
+        <tr>
+          <td>{{forloop.counter}}</td>
+          <td class="pl-4">{{profile.company_name}}</td>
+          <td class="pl-4">{{profile.owner_name}}</td>
+          <td class="pl-4">{{profile.address}}</td>
+          <td class="pl-4">{{profile.phone_number}}</td>
+          <td class="pl-4">{{profile.mobile_number}}</td>
+          <td class="pl-4">{{profile.website}}</td>
+          <td class="pl-4">{{profile.email}}</td>
+          <td class="pl-4">{{profile.location}}</td>
+          <td class="pl-4">{{profile.created_at}}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
