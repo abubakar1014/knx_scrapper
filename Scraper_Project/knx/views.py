@@ -33,11 +33,11 @@ def accept_cookie(driver):
 
 def load_jobs(driver):
     flag = True
-    # count = 0
+    count = 0
     while(flag):
-        # if count > 100:
-        #     flag = False
-        # count += 1
+        if count > 20:
+            flag = False
+        count += 1
         try:
             load = driver.find_elements(By.CLASS_NAME, "load_more")
             if len(load)>0:
@@ -86,43 +86,36 @@ def scrap_jobs(driver):
             time.sleep(2)
         except:
             pass
-    
-    # date_time = str(datetime.datetime.now())
-    # columns_name = ["company_name", "owner_name", "address", "phone_no", "mobile_no", "website", "email", "location"]
-    # df = pd.DataFrame(data=scrapped_data, columns=columns_name)
-    # filename = f"companies_data_{str(date_time)}.csv"
-    # df.to_csv(filename, index=False)
     return scrapped_data
 
 def index(request):
+    # run_fun_in_loop()
+    print("Function called in a seperate thread")
     return render(request, 'home.html')
 
 def profiles(request):
     profiles = ProfileData.objects.all()
     return render(request, 'show_data.html',{'profiles':profiles})
-
-# def scrape(request):
-#     start_script()
-#     return redirect("index")
-
+    
+    
 def append_values(spreadsheet_id, range_name, value_input_option, values):
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
     credentials = None
-    if os.path.exists("token.json"):
-        credentials = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if os.path.exists("knx/token.json"):
+        credentials = Credentials.from_authorized_user_file("knx/token.json", SCOPES)
 
     if not credentials or not credentials.valid:
         if credentials and credentials.expired and credentials.refresh_token:
             credentials.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file("knx/credentials.json", SCOPES)
             credentials = flow.run_local_server(port=0)
-            with open("token.json", "w") as token: 
+            with open("knx/token.json", "w") as token:
                 token.write(credentials.to_json())
     # pylint: disable=maybe-no-member
     try:
         service = build("sheets", "v4", credentials=credentials)
-        
+
         body = {"values": values}
         result = (
             service.spreadsheets()
@@ -142,7 +135,6 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
         return error
 
 
-#@start_new_thread
 def start_script():
     total_data = 0
     try:
@@ -151,29 +143,36 @@ def start_script():
         url = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
         driver.get(url)
         accept_cookie(driver)
-        # load_jobs(driver)
+        load_jobs(driver)
         start_time = datetime.datetime.now()
         scraped_data = scrap_jobs(driver)
+        driver.quit()
         user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7]) for profile in scraped_data]
         print(f"Total Scrapped Data is : {len(user_profiles)}")
         ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
         end_time = datetime.datetime.now()
         newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
-        new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location]for x in newly_objects]
-        append_values(
-            "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
-            "Sheet1",
-            "USER_ENTERED",
-            new_entries,
-            )
-
-        
-        print(f"Saved in database objects are : {newly_objects.count()}")
-        print("SCRAPING_ENDED")
+        if len(newly_objects) > 0:
+            new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location]for x in newly_objects]
+            append_values(
+                "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+                "Sheet1",
+                "USER_ENTERED",
+                new_entries,
+                )
+            print(f"Saved in database objects are : {newly_objects.count()}")
+            print("SCRAPING_ENDED")
     except Exception as e:
         print(e)
 
-while(1):
-    start_script()
-    time.sleep(36000)
-    
+@start_new_thread        
+def run_fun_in_loop():
+    print("yes called successfully")
+    while(1):
+        start_script()
+        time.sleep(36000)
+        
+def scrape(request):
+    run_fun_in_loop()
+    print("Function called in a seperate thread")
+    return redirect('index')
