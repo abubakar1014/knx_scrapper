@@ -10,6 +10,7 @@ import datetime
 import time
 import pandas as pd
 import re
+from Scraper_Project.utils import send_message
 import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -154,6 +155,7 @@ def start_script():
         newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
         if len(newly_objects) > 0:
             new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location]for x in newly_objects]
+            send_message(new_entries)
             append_values(
                 "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
                 "Sheet1",

@@ -119,3 +119,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+SLACK_API_TOKEN = "xoxb-6572192356949-6601582477027-YFZ1QIYUayf0mInJwYbyNncU"
+SLACK_BOT_NOTIFICATION_ENABLED=True
+SLACK_SCOPES = ['chat:write.public']
