@@ -50,44 +50,60 @@ def load_jobs(driver):
             flag = False
             print("")
 
-def append_data(data, comp):
-    data.append(str(comp[0]).strip("+"))
+def append_data(data, company):
+    name_comp = company.find_elements(By.TAG_NAME, "td")
+    data.append(str(name_comp[0].text).strip("+"))
+    data.append(str(name_comp[1].text).strip("+"))
+    comp = company.text.split('\n')
     data.append(str(comp[1]).strip("+"))
     data.append(str(comp[3]).strip("+"))
-    data.append(str(comp[4]).strip("+"))
+    if '+' in comp[4]:
+        data.append(str(comp[4]).strip("+"))
+    else:
+        data.append(str("N/A").strip("+"))
     if 'Mobile:' in comp[5]:
-        data.append(str(comp[5]).strip("+"))
+        if '+' in comp[5]:
+            data.append(str(comp[5]).strip("+"))
+        else:
+            data.append(str("N/A").strip("+"))
     else:
         data.append(str("N/A").strip("+"))
     return data
 
 def scrap_jobs(driver):
-    time.sleep(2)
     scrapped_data = []
     try:
+        time.sleep(2)
         companies = driver.find_elements(By.CLASS_NAME, "accordion-list-item")
         driver.execute_script("window.scrollTo(0, 0);")
+        for company in companies:
+            try:
+                data = []
+                company.click()
+                data = append_data(data, company)
+                web = company.find_element(By.CLASS_NAME, "partner-col-2")
+                website = web.find_element(By.TAG_NAME, "a").text
+                if '.' in website:
+                    data.append(str(website).strip("+"))
+                else:
+                    data.append(str("N/A").strip("+"))
+                links = company.find_elements(By.CLASS_NAME, "link_to_map")
+                if len(links) > 1:
+                    data.append(str(links[0].get_attribute('href')).strip("+"))
+                    data.append(str(links[1].get_attribute('href')).strip("+"))
+                else:
+                    mail = company.find_element(By.CLASS_NAME, "partner-col-2")
+                    email = mail.find_elements(By.TAG_NAME, "span")[1].text
+                    data.append(str(email.split('Email: ')[1]).strip("+"))
+                    data.append(str(links[0].get_attribute('href')).strip("+"))
+                scrapped_data.append(data)
+                company.location_once_scrolled_into_view
+                time.sleep(2)
+            except:
+                pass
+        return scrapped_data
     except:
-        pass
-    for company in companies:
-        try:
-            data = []
-            company.click()
-            comp = company.text.split('\n')
-            data = append_data(data, comp)
-            web = company.find_element(By.CLASS_NAME, "partner-col-2")
-            website = web.find_element(By.TAG_NAME, "a").get_attribute('href')
-            data.append(str(website).strip("+"))
-            links = company.find_elements(By.CLASS_NAME, "link_to_map")
-            links[1].get_attribute('href')
-            data.append(str(links[0].get_attribute('href')).strip("+"))
-            data.append(str(links[1].get_attribute('href')).strip("+"))
-            scrapped_data.append(data)
-            company.location_once_scrolled_into_view
-            time.sleep(2)
-        except:
-            pass
-    return scrapped_data
+        return scrapped_data
 
 def index(request):
     # run_fun_in_loop()
@@ -148,7 +164,7 @@ def start_script():
         start_time = datetime.datetime.now()
         scraped_data = scrap_jobs(driver)
         driver.quit()
-        user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7]) for profile in scraped_data]
+        user_profiles = [ProfileData(company_name=profile[0], city=profile[1], owner_name=profile[2], address=profile[3], phone_number=profile[4], mobile_number=profile[5], website=profile[6], email=profile[7], location=profile[8]) for profile in scraped_data]
         print(f"Total Scrapped Data is : {len(user_profiles)}")
         ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
         end_time = datetime.datetime.now()
