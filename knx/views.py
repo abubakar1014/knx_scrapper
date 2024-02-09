@@ -20,7 +20,7 @@ from google.oauth2.credentials import Credentials
 import os
 
 from knx.models import ProfileData
-from knx.utils import configure_webdriver
+from knx.utils import configure_webdriver, parse_date
 from knx.utils import start_new_thread
 
 
@@ -50,13 +50,9 @@ def load_jobs(driver):
             flag = False
             print("")
 
-def append_data(data, company):
-    name_comp = company.find_elements(By.TAG_NAME, "td")
-    data.append(str(name_comp[0].text).strip("+"))
-    data.append(str(name_comp[1].text).strip("+"))
-    comp = company.text.split('\n')
+def append_data(data, comp):
     data.append(str(comp[1]).strip("+"))
-    data.append(str(comp[3]).strip("+"))
+    data.append(str(comp[3].split(',')[0]).strip("+"))
     if '+' in comp[4]:
         data.append(str(comp[4]).strip("+"))
     else:
@@ -68,7 +64,12 @@ def append_data(data, company):
             data.append(str("N/A").strip("+"))
     else:
         data.append(str("N/A").strip("+"))
-    return data
+    comp
+    try:
+        country = comp[3].split(', ')[-1]
+    except:
+        country = "N/A"
+    return data, country
 
 def scrap_jobs(driver):
     scrapped_data = []
@@ -80,7 +81,11 @@ def scrap_jobs(driver):
             try:
                 data = []
                 company.click()
-                data = append_data(data, company)
+                country = ""
+                name_comp = company.find_elements(By.TAG_NAME, "td")
+                data.append(str(name_comp[0].text).strip("+"))
+                comp = company.text.split('\n')
+                data, country = append_data(data, comp)
                 web = company.find_element(By.CLASS_NAME, "partner-col-2")
                 website = web.find_element(By.TAG_NAME, "a").text
                 if '.' in website:
@@ -96,6 +101,8 @@ def scrap_jobs(driver):
                     email = mail.find_elements(By.TAG_NAME, "span")[1].text
                     data.append(str(email.split('Email: ')[1]).strip("+"))
                     data.append(str(links[0].get_attribute('href')).strip("+"))
+                data.append(str(name_comp[1].text).strip("+"))
+                data.append(str(country).strip("+"))
                 scrapped_data.append(data)
                 company.location_once_scrolled_into_view
                 time.sleep(2)
@@ -112,7 +119,7 @@ def index(request):
 
 def profiles(request):
     profiles = ProfileData.objects.all()
-    return render(request, 'show_data.html',{'profiles':profiles})
+    return render(request, 'show_data.html', {'profiles':profiles})
     
     
 def append_values(spreadsheet_id, range_name, value_input_option, values):
@@ -164,13 +171,13 @@ def start_script():
         start_time = datetime.datetime.now()
         scraped_data = scrap_jobs(driver)
         driver.quit()
-        user_profiles = [ProfileData(company_name=profile[0], city=profile[1], owner_name=profile[2], address=profile[3], phone_number=profile[4], mobile_number=profile[5], website=profile[6], email=profile[7], location=profile[8]) for profile in scraped_data]
+        user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]
         print(f"Total Scrapped Data is : {len(user_profiles)}")
         ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
         end_time = datetime.datetime.now()
         newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
         if len(newly_objects) > 0:
-            new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location, x.city]for x in newly_objects]
+            new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
             send_message(new_entries)
             append_values(
                 "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",

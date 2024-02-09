@@ -18,7 +18,8 @@
           <th class="pl-4">Email</th>
           <th class="pl-4">Location</th>
           <th class="pl-4">City</th>
-          <th class="pl-4">Created_at</th>
+          <th class="pl-4">Country</th>
+          <th class="pl-4">Date</th>
         </tr>
       </thead>
       <tbody>
@@ -34,7 +35,8 @@
           <td class="pl-4">{{profile.email}}</td>
           <td class="pl-4">{{profile.location}}</td>
           <td class="pl-4">{{profile.city}}</td>
-          <td class="pl-4">{{profile.created_at}}</td>
+          <td class="pl-4">{{profile.country}}</td>
+          <td class="pl-4">{{profile.created_at|date:'F d, Y'}}</td>
         </tr>
         {% endfor %}
       </tbody>
