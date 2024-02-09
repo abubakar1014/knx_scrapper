@@ -155,7 +155,7 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
 def start_script():
     total_data = 0
     try:
-        driver = configure_webdriver(True)
+        driver = configure_webdriver()
         driver.maximize_window()
         url = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
         driver.get(url)
@@ -170,7 +170,7 @@ def start_script():
         end_time = datetime.datetime.now()
         newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
         if len(newly_objects) > 0:
-            new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location]for x in newly_objects]
+            new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location, x.city]for x in newly_objects]
             send_message(new_entries)
             append_values(
                 "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
