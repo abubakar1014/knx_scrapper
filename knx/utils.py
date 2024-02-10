@@ -1,6 +1,8 @@
 from django.db import models
 from threading import Thread
 from selenium import webdriver
+from datetime import datetime
+from django.utils import timezone
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
 
@@ -76,3 +78,7 @@ def start_new_thread(function):
         t.daemon = True
         t.start()
     return decorator
+
+def parse_date(date):
+    human_readable_date = str(date).split(' ')[0]
+    return human_readable_date
