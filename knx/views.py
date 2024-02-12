@@ -52,15 +52,15 @@ def load_jobs(driver):
 
 def append_data(data, comp):
     data.append(str(comp[1]).strip("+"))
-    address = comp[2] + " " + comp[3].split(',')[0]
+    address = comp[2] + " " + comp[3]
     data.append(str(address).strip("+"))
     if '+' in comp[4]:
-        data.append(str(comp[4]).strip("+"))
+        data.append(str(comp[4].strip('Phone: ').strip('Mobile: ')).strip(","))
     else:
         data.append(str("N/A").strip("+"))
     if 'Mobile:' in comp[5]:
         if '+' in comp[5]:
-            data.append(str(comp[5]).strip("+"))
+            data.append(str(comp[4].strip('Mobile: ').strip('Phone: ')).strip(","))
         else:
             data.append(str("N/A").strip("+"))
     else:
@@ -102,12 +102,15 @@ def scrap_jobs(driver):
                     email = mail.find_elements(By.TAG_NAME, "span")[1].text
                     data.append(str(email.split('Email: ')[1]).strip("+"))
                     data.append(str(links[0].get_attribute('href')).strip("+"))
-                data.append(str(name_comp[1].text).strip("+"))
-                data.append(str(country).strip("+"))
+                city = str(name_comp[1].text).strip("+")  
+                data.append(city)
+                if str(country).strip("+") == city :
+                    data.append("N/A")
+                else:    
+                    data.append(str(country).strip("+"))
                 scrapped_data.append(data)
                 company.location_once_scrolled_into_view
                 time.sleep(2)
-                break
             except:
                 pass
         return scrapped_data
@@ -181,8 +184,6 @@ def start_script():
         if len(newly_objects) > 0:
             new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
             # send_message(new_entries)
-            import pdb
-            pdb.set_trace()
             append_values(
                 "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
                 "Sheet1",
