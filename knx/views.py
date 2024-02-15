@@ -36,19 +36,35 @@ def load_jobs(driver):
     flag = True
     count = 0
     while(flag):
-        if count > 20:
-            flag = False
-        count += 1
         try:
             load = driver.find_elements(By.CLASS_NAME, "load_more")
             if len(load)>0:
                 time.sleep(1)
                 load[0].click()
+                start_time = datetime.datetime.now()
+                scraped_data = scrap_jobs(driver)
+                user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]
+                print(f"Total Scrapped Data is : {len(user_profiles)}")
+                ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
+                end_time = datetime.datetime.now()
+                newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
+                # newly_objects = ProfileData.objects.all()
+                if len(newly_objects) > 0:
+                    new_entries = [[x.company_name,x.owner_name,x.address,x.phone_number,x.mobile_number,x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
+                    # send_message(new_entries)
+                    append_values(
+                        "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+                        "Sheet1",
+                        "USER_ENTERED",
+                        new_entries,
+                        )
+                    count += newly_objects.count()
+                    print(f"Saved in database objects are : {count}")
             else:
                 flag = False
-        except:
+        except Exception as e:
+            print(e)
             flag = False
-            print("")
 
 def append_data(data, comp):
     data.append(str(comp[1]).strip("+"))
@@ -76,7 +92,8 @@ def scrap_jobs(driver):
     scrapped_data = []
     try:
         time.sleep(2)
-        companies = driver.find_elements(By.CLASS_NAME, "accordion-list-item")
+        last_twenty = 20
+        companies = driver.find_elements(By.CLASS_NAME, "accordion-list-item")[-last_twenty:]
         driver.execute_script("window.scrollTo(0, 0);")
         for company in companies:
             try:
@@ -110,7 +127,6 @@ def scrap_jobs(driver):
                     data.append(str(country).strip("+"))
                 scrapped_data.append(data)
                 company.location_once_scrolled_into_view
-                time.sleep(2)
             except:
                 pass
         return scrapped_data
@@ -165,9 +181,8 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
 
 
 def start_script():
-    total_data = 0
     try:
-        driver = configure_webdriver(True)
+        driver = configure_webdriver()
         driver.maximize_window()
         url = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
         driver.get(url)
