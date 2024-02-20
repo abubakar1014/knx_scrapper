@@ -19,7 +19,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import os
 
-from knx.models import ProfileData
+from knx.models import ProfileData, ScraperDetail
 from knx.utils import configure_webdriver, parse_date
 from knx.utils import start_new_thread
 
@@ -40,26 +40,23 @@ def load_jobs(driver):
         try:
             start_count += 1
             print(f"Load More Count is : {start_count}")
-            print("Eneterd in condition and start scrapping")
-            start_time = datetime.datetime.now()
+            # start_time = datetime.datetime.now()
             scraped_data = scrap_jobs(driver)
-            user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]
-            print(f"Total Scrapped Data is : {len(user_profiles)}")
-            ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
-            end_time = datetime.datetime.now()
-            newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
+            # user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]
+            # print(f"Total Scrapped Data is : {len(user_profiles)}")
+            # ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True)
+            # end_time = datetime.datetime.now()
+            # newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
             # newly_objects = ProfileData.objects.all()
-            if len(newly_objects) > 0:
-                new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if "N/A" not in x.phone_number else x.phone_number,"'"+x.mobile_number if "N/A" not in x.mobile_number else x.mobile_number,x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
+            if len(scraped_data) > 0:
+                new_entries = [[x[0], x[1], x[2], "'" + x[3] if "N/A" not in x[3] else x[3], "'" + x[4] if "N/A" not in x[4] else x[4], x[5], x[6], x[7], x[8], x[9], parse_date()] for x in scraped_data]
                 # send_message(new_entries)
-                append_values(
-                    "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
-                    "Sheet1",
-                    "USER_ENTERED",
-                    new_entries,
-                    )
-                count += newly_objects.count()
-                print(f"Saved in database objects are : {count}")
+                # append_values(
+                #     "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+                #     "Sheet1",
+                #     "USER_ENTERED",
+                #     new_entries,
+                #     )
             load = driver.find_elements(By.CLASS_NAME, "load_more")
             time.sleep(1)
             load[0].click()
@@ -181,7 +178,32 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
     except HttpError as error:
         print(f"An error occurred: {error}")
         return error
+    
+def check_count():
+    scraper = ScraperDetail.objects.filter()
+    if not scraper.exists():
+        scraper.create(count=0)
+    driver = configure_webdriver(True)
+    driver.get("https://www.knx.org/knx-en/for-professionals/community/partners/index.php")
+    time.sleep(1)
+    accept_cookie(driver)
+    time.sleep(1)
+    list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
+    driver.quit()
+    if ScraperDetail.objects.filter(count=list_count).exists():
+        return False
+    ScraperDetail.objects.all().update(count=list_count)
+    return True
 
+def sort_qualification(driver):
+    load_jobs(driver)
+    driver.execute_script("window.scrollTo(0, 0);")
+    btn = driver.find_elements(By.CLASS_NAME, "dropdown-toggle")
+    btn[1].click()
+    fields = driver.find_elements(By.CLASS_NAME, "dropdown-menu")[-1]
+    fields.find_elements(By.TAG_NAME, "a")[1].click()
+    load_jobs(driver)
+    driver.execute_script("window.scrollTo(0, 0);")
 
 def start_script():
     try:
@@ -226,7 +248,6 @@ def scrape(request):
     run_fun_in_loop()
     print("Function called in a seperate thread")
     return redirect('index')
-
 
 
 

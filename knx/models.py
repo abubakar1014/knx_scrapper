@@ -15,3 +15,6 @@ class ProfileData(TimeStamped):
     
     def __str__(self):
         return f"{self.company_name} {self.owner_name}"
+    
+class ScraperDetail(TimeStamped):
+    count = models.CharField(max_length=20)
