@@ -54,6 +54,7 @@ def configure_webdriver(open_browser=False, block_media=False, block_elements=['
     options.add_extension(extension_path)
 
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver.maximize_window()
 
     if block_media:
         # Enable Chrome DevTools Protocol
@@ -79,6 +80,7 @@ def start_new_thread(function):
         t.start()
     return decorator
 
-def parse_date(date):
+def parse_date():
+    date = datetime.now()
     human_readable_date = str(date).split(' ')[0]
     return human_readable_date
