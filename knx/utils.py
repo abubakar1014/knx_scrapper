@@ -80,7 +80,6 @@ def start_new_thread(function):
         t.start()
     return decorator
 
-def parse_date():
-    date = datetime.now()
+def parse_date(date):
     human_readable_date = str(date).split(' ')[0]
     return human_readable_date
