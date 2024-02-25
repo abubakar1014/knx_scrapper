@@ -12,6 +12,9 @@ class ProfileData(TimeStamped):
     website = models.CharField(max_length=500,  blank=True, null=True)
     email = models.CharField(max_length=500,  blank=True, null=True)
     location = models.CharField(max_length=500,  blank=True, null=True)
+
+    class Meta:
+        unique_together = ['company_name', 'phone_number']
     
     def __str__(self):
         return f"{self.company_name} {self.owner_name}"
