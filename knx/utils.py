@@ -54,6 +54,7 @@ def configure_webdriver(open_browser=False, block_media=False, block_elements=['
     options.add_extension(extension_path)
 
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver.maximize_window()
 
     if block_media:
         # Enable Chrome DevTools Protocol
