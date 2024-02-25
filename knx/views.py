@@ -194,10 +194,18 @@ def sort_qualification(driver):
     scraped_data = load_jobs(driver)
     data += scraped_data
     driver.execute_script("window.scrollTo(0, 0);")
-    first_occurrence = {}
-    unique_list_of_lists = [entry for entry in data if not entry[6].startswith("https") or first_occurrence.setdefault(entry[0], entry) == entry]
+    # unique_list_of_lists = [entry for entry in data if not entry[6].startswith("https") or first_occurrence.setdefault(entry[0], entry) == entry]
     # unique_list_of_lists = [inner_list for inner_list in data if not inner_list[6].startswith("https")]
-    user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in unique_list_of_lists]    
+    unique_data_set = set()
+    unique_data = []
+    for inner_list in data:
+        if "https" in inner_list[1]:
+            if inner_list[1] not in unique_data_set:
+                unique_data_set.add(inner_list[1])
+                unique_data.append(inner_list)
+        else:
+            unique_data.append(inner_list)
+    user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in unique_data]    
     print(f"Total Scrapped Data is : {len(user_profiles)}")
     ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
     end_time = datetime.datetime.now()
