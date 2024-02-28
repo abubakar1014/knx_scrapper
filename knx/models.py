@@ -30,4 +30,6 @@ class ScraperDetail(TimeStamped):
     def __str__(self):
         return f"{self.country_name} - {self.count}"
     
-    
+class UrlCount(TimeStamped):
+    count = models.PositiveIntegerField(null=True, blank=True, default=0)
+    url = models.CharField(max_length=500,  blank=True, null=True, default="N/A")
