@@ -20,7 +20,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import os
 
-from knx.models import ProfileData, ScraperDetail
+from knx.models import ProfileData, ScraperDetail, UrlCount
 from knx.utils import configure_webdriver, parse_date
 from knx.utils import start_new_thread
 
@@ -164,21 +164,22 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
         print(f"An error occurred: {error}")
         return error
     
-def check_count():
-    driver = configure_webdriver()
-    scraper = ScraperDetail.objects.filter()
-    if not scraper.exists():
-        scraper.create(count=0)
-    driver.get("https://www.knx.org/knx-en/for-professionals/community/partners/index.php")
+def check_count(driver, link, all):
+    driver.get(link)
     time.sleep(1)
     accept_cookie(driver)
     time.sleep(1)
     list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
-    driver.quit()
-    if ScraperDetail.objects.filter(count=list_count).exists():
-        return False
-    ScraperDetail.objects.all().update(count=list_count)
-    return True
+    if all:
+        if UrlCount.objects.filter(count=list_count, url=link).exists():
+            return False
+        UrlCount.objects.all().update(count=list_count, url=link)
+        return True
+    else:
+        if ScraperDetail.objects.filter(count=list_count, url=link).exists():
+            return False
+        ScraperDetail.objects.filter(url=link).update(count=list_count, url=link)
+        return True
 
 def sort_qualification(driver):
     data = []
@@ -238,16 +239,24 @@ def sort_qualification(driver):
 
 def start_script():
     try:
-        if check_count():
-            urls = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
-            for count, url in enumerate(urls):
-                print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
-                driver = configure_webdriver()
-                driver.get(url)
-                accept_cookie(driver)
-                sort_qualification(driver)
-                driver.quit()
-                print("SCRAPING_ENDED")
+        driver = configure_webdriver()
+        scraper = UrlCount.objects.filter()
+        if not scraper.exists():
+            scraper.create(count=0)
+        link = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
+        if check_count(driver, link, True):
+            driver.quit()
+            links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
+            for count, link in enumerate(links):
+                if count > 0:
+                    driver = configure_webdriver()
+                    if check_count(driver, link["url"], False):
+                        print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
+                        driver.get(link["url"])
+                        accept_cookie(driver)
+                        sort_qualification(driver)
+                        print("SCRAPING_ENDED")
+                    driver.quit()
     except Exception as e:
         print(e)
 
