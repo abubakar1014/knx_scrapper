@@ -238,8 +238,8 @@ def sort_qualification(driver):
     #         )
 
 def start_script():
-    ran = []
-    not_ran = []
+    # ran = []
+    # not_ran = []
     try:
         driver = configure_webdriver()
         scraper = UrlCount.objects.filter()
@@ -254,13 +254,13 @@ def start_script():
                     driver = configure_webdriver()
                     print(link['country_name'].split('\n')[0], '\n')
                     if check_count(driver, link["url"], False):
-                        ran.append(link['country_name'].split('\n')[0])
+                        # ran.append(link['country_name'].split('\n')[0])
                         print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
                         driver.get(link["url"])
                         accept_cookie(driver)
                         sort_qualification(driver)
-                    else:
-                        ran.append(link['country_name'].split('\n')[0])
+                    # else:
+                    #     # ran.append(link['country_name'].split('\n')[0])
                     driver.quit()
     except:
         pass
