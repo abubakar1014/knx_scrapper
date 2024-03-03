@@ -47,7 +47,7 @@ def load_jobs(driver):
             time.sleep(1)
             load[0].click()
         except Exception as e:
-            print(e)
+            pass
             flag = False
     return data
 
@@ -171,9 +171,9 @@ def check_count(driver, link, all):
     time.sleep(1)
     list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
     if all:
-        if UrlCount.objects.filter(count=list_count, url=link).exists():
-            return False
-        UrlCount.objects.all().update(count=list_count, url=link)
+        # if UrlCount.objects.filter(count=list_count, url=link).exists():
+        #     return False
+        # UrlCount.objects.all().update(count=list_count, url=link)
         return True
     else:
         if ScraperDetail.objects.filter(count=list_count, url=link).exists():
@@ -215,29 +215,31 @@ def sort_qualification(driver):
         if '+' in mobile:
             x[4]= "'"+mobile
     
-    # user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in unique_comp]    
-    # print(f"Total Scrapped Data is : {len(user_profiles)}")
-    # ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
-    # time.sleep(5)
-    # end_time = datetime.datetime.now()
-    # newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
-    # if len(newly_objects) > 0:
-    #     new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if x.phone_number != "N/A" else x.phone_number,"'"+x.mobile_number if x.mobile_number != "N/A" else x.mobile_number, x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
-    #     # send_message(new_entries)
-    #     append_values(
-    #         "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
-    #         "Sheet1",
-    #         "USER_ENTERED",
-    #         new_entries,
-    #         )
-    append_values(
+    user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in unique_comp]    
+    print(f"Total Scrapped Data is : {len(user_profiles)}")
+    ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
+    time.sleep(5)
+    end_time = datetime.datetime.now()
+    newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
+    if len(newly_objects) > 0:
+        new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if x.phone_number != "N/A" else x.phone_number,"'"+x.mobile_number if x.mobile_number != "N/A" else x.mobile_number, x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
+        # send_message(new_entries)
+        append_values(
             "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
             "Sheet1",
             "USER_ENTERED",
-            unique_comp,
+            new_entries,
             )
+    # append_values(
+    #         "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+    #         "Sheet1",
+    #         "USER_ENTERED",
+    #         unique_comp,
+    #         )
 
 def start_script():
+    ran = []
+    not_ran = []
     try:
         driver = configure_webdriver()
         scraper = UrlCount.objects.filter()
@@ -247,18 +249,23 @@ def start_script():
         if check_count(driver, link, True):
             driver.quit()
             links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
-            for count, link in enumerate(links):
+            for count, link in enumerate(links[166:]):
                 if count > 0:
                     driver = configure_webdriver()
+                    print(link['country_name'].split('\n')[0], '\n')
                     if check_count(driver, link["url"], False):
+                        ran.append(link['country_name'].split('\n')[0])
                         print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
                         driver.get(link["url"])
                         accept_cookie(driver)
                         sort_qualification(driver)
-                        print("SCRAPING_ENDED")
+                    else:
+                        ran.append(link['country_name'].split('\n')[0])
                     driver.quit()
     except Exception as e:
-        print(e)
+        pass
+    print("Ran", ran)
+    print("Not ran", not_ran)
 
 @start_new_thread        
 def run_fun_in_loop():
