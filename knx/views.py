@@ -171,9 +171,9 @@ def check_count(driver, link, all):
     time.sleep(1)
     list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
     if all:
-        # if UrlCount.objects.filter(count=list_count, url=link).exists():
-        #     return False
-        # UrlCount.objects.all().update(count=list_count, url=link)
+        if UrlCount.objects.filter(count=list_count, url=link).exists():
+            return False
+        UrlCount.objects.all().update(count=list_count, url=link)
         return True
     else:
         if ScraperDetail.objects.filter(count=list_count, url=link).exists():
@@ -249,7 +249,7 @@ def start_script():
         if check_count(driver, link, True):
             driver.quit()
             links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
-            for count, link in enumerate(links[166:]):
+            for count, link in enumerate(links):
                 if count > 0:
                     driver = configure_webdriver()
                     print(link['country_name'].split('\n')[0], '\n')
@@ -262,10 +262,10 @@ def start_script():
                     else:
                         ran.append(link['country_name'].split('\n')[0])
                     driver.quit()
-    except Exception as e:
+    except:
         pass
-    print("Ran", ran)
-    print("Not ran", not_ran)
+    # print("Ran", ran)
+    # print("Not ran", not_ran)
 
 @start_new_thread        
 def run_fun_in_loop():
