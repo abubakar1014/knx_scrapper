@@ -20,7 +20,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import os
 
-from knx.models import ProfileData, ScraperDetail, UrlCount
+from knx.models import CompaniesData, ScraperDetail, UrlCount
 from knx.utils import configure_webdriver, parse_date
 from knx.utils import start_new_thread
 
@@ -124,7 +124,7 @@ def index(request):
     return render(request, 'home.html')
 
 def profiles(request):
-    profiles = ProfileData.objects.all()
+    profiles = CompaniesData.objects.all()
     return render(request, 'show_data.html', {'profiles':profiles})
     
     
@@ -237,37 +237,37 @@ def sort_qualification(driver):
             unique_comp,
             )
 
-def start_script():
-    try:
-        driver = configure_webdriver()
-        scraper = UrlCount.objects.filter()
-        if not scraper.exists():
-            scraper.create(count=0)
-        link = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
-        if check_count(driver, link, True):
-            driver.quit()
-            links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
-            for count, link in enumerate(links):
-                if count > 0:
-                    driver = configure_webdriver()
-                    if check_count(driver, link["url"], False):
-                        print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
-                        driver.get(link["url"])
-                        accept_cookie(driver)
-                        sort_qualification(driver)
-                        print("SCRAPING_ENDED")
-                    driver.quit()
-    except Exception as e:
-        print(e)
+# def start_script():
+#     try:
+#         driver = configure_webdriver()
+#         scraper = UrlCount.objects.filter()
+#         if not scraper.exists():
+#             scraper.create(count=0)
+#         link = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
+#         if check_count(driver, link, True):
+#             driver.quit()
+#             links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
+#             for count, link in enumerate(links):
+#                 if count > 0:
+#                     driver = configure_webdriver()
+#                     if check_count(driver, link["url"], False):
+#                         print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
+#                         driver.get(link["url"])
+#                         accept_cookie(driver)
+#                         sort_qualification(driver)
+#                         print("SCRAPING_ENDED")
+#                     driver.quit()
+#     except Exception as e:
+#         print(e)
 
-@start_new_thread        
-def run_fun_in_loop():
-    print("yes called successfully")
-    while(1):
-        start_script()
-        time.sleep(36000)
+# @start_new_thread        
+# def run_fun_in_loop():
+#     print("yes called successfully")
+#     while(1):
+#         start_script()
+#         time.sleep(36000)
         
-def scrape(request):
-    run_fun_in_loop()
-    print("Function called in a seperate thread")
-    return redirect('index')
+# def scrape(request):
+#     run_fun_in_loop()
+#     print("Function called in a seperate thread")
+#     return redirect('index')
