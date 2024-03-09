@@ -74,3 +74,4 @@ class CompaniesData(TimeStamped):
     latitude = models.FloatField(default=0.0)
     communication_journal = models.TextField(default="N/A")
     communication_journal_language_id = models.IntegerField(default=0)
+    country_name = models.CharField(max_length=255, default="N/A")

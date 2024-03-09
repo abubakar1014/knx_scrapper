@@ -1,15 +1,17 @@
 import time
 import requests
 import datetime
-from knx.utils import start_new_thread
+from knx.utils import start_new_thread, COUNTRIES
 from django.shortcuts import redirect
-from .models import CompaniesData
+from .models import CompaniesData, UrlCount
 import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from selenium.webdriver.common.by import By
+from knx.utils import configure_webdriver
 import os
 
 def append_values(spreadsheet_id, range_name, value_input_option, values):
@@ -150,7 +152,8 @@ def start_script():
                 longitude=record[34],
                 latitude=record[35],
                 communication_journal=record[36],
-                communication_journal_language_id=record[37]
+                communication_journal_language_id=record[37],
+                country_name=COUNTRIES[record[29]]
             ) for record in real_records
         ]    
         print(f"Total Scrapped Data is : {len(user_profiles)}")
@@ -192,7 +195,7 @@ def start_script():
                     x.housenumber,
                     x.zipcode,
                     x.city,
-                    x.country_id,
+                    x.country_name,
                     x.vat,
                     x.email,
                     x.website,
@@ -200,7 +203,8 @@ def start_script():
                     x.longitude,
                     x.latitude,
                     x.communication_journal,
-                    x.communication_journal_language_id
+                    x.communication_journal_language_id,
+                    x.country_id,
                 ] for x in newly_objects
             ]
             # send_message(new_entries)
@@ -211,12 +215,37 @@ def start_script():
                 new_entries,
             )
 
+def accept_cookie(driver):
+    try:
+        btns = driver.find_element(By.CLASS_NAME, "cookieButtons")
+        btns.find_elements(By.TAG_NAME, "button")[1].click()
+        time.sleep(2)
+    except:
+        pass
+
+def check_count():
+    driver = configure_webdriver()
+    scraper = UrlCount.objects.filter()
+    if not scraper.exists():
+        scraper.create(count=0)
+    link = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
+    driver.get(link)
+    time.sleep(1)
+    accept_cookie(driver)
+    time.sleep(1)
+    list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
+    if UrlCount.objects.filter(count=list_count, url=link).exists():
+        return False
+    UrlCount.objects.all().update(count=list_count, url=link)
+    return True
+
 @start_new_thread        
 def run_fun_in_loop():
     print("yes called successfully")
     while(1):
-        start_script()
-        time.sleep(36000)
+        if check_count():
+            start_script()
+            time.sleep(36000)
         
 def scrape(request):
     run_fun_in_loop()
