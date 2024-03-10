@@ -98,11 +98,12 @@ def start_script():
     total_count = 122216
     total_loop = int(total_count/20)
     total_loop += 2
-    increment_count = 0
+    increment_count = 66000
     real_records = []
     for x in range(total_loop):
         start_time = datetime.datetime.now()
         increment_count += 20
+        print(increment_count)
         params["per_page"] = increment_count
         response = requests.get(
         'https://www.knx.org/knx-en/for-professionals/community/partners/index.php',
@@ -113,6 +114,7 @@ def start_script():
         json_response = response.json() 
         for record in json_response["rows"]:  
             real_records.append(list(record.values()))
+        # try:
         user_profiles = [
             CompaniesData(
                 uid=record[0],
@@ -153,10 +155,14 @@ def start_script():
                 latitude=record[35],
                 communication_journal=record[36],
                 communication_journal_language_id=record[37],
-                country_name=COUNTRIES[record[29]]
+                country_name=COUNTRIES.get(record[29], "N/A")
             ) for record in real_records
-        ]    
-        print(f"Total Scrapped Data is : {len(user_profiles)}")
+        ]
+        # print(user_profiles)
+        # import pdb
+        # pdb.set_trace()
+        # except:
+        # [print(i[29]) for i in real_records]
         CompaniesData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
         time.sleep(5)
         end_time = datetime.datetime.now()
@@ -243,8 +249,8 @@ def check_count():
 def run_fun_in_loop():
     print("yes called successfully")
     while(1):
+        start_script()
         if check_count():
-            start_script()
             time.sleep(36000)
         
 def scrape(request):

@@ -85,6 +85,7 @@ def parse_date(date):
     return human_readable_date
 
 COUNTRIES   = {
+    0: "N/A",
     5: "Ethiopia",
     6: "Kenya",
     7: "Madagascar",
@@ -257,4 +258,5 @@ COUNTRIES   = {
     247: "Saint Barthélemy",
     249: "Bonaire",
     252: "Curaçao",
+    253: "N/A",
 }
