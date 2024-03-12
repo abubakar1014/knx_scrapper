@@ -98,7 +98,7 @@ def start_script():
     total_count = 122216
     total_loop = int(total_count/20)
     total_loop += 2
-    increment_count = 70000
+    increment_count = 192200
     real_records = []
     for x in range(total_loop):
         start_time = datetime.datetime.now()
