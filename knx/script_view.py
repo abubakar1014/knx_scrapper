@@ -1,6 +1,7 @@
 import time
 import requests
 import datetime
+from Scraper_Project.utils import send_message
 from knx.utils import start_new_thread, COUNTRIES
 from django.shortcuts import redirect
 from .models import CompaniesData, UrlCount
@@ -98,7 +99,7 @@ def start_script():
     total_count = 122216
     total_loop = int(total_count/20)
     total_loop += 2
-    increment_count = 192200
+    increment_count = 0
     real_records = []
     for x in range(total_loop):
         start_time = datetime.datetime.now()
@@ -213,7 +214,8 @@ def start_script():
                     x.country_id,
                 ] for x in newly_objects
             ]
-            # send_message(new_entries)
+            print("sending message on slack")
+            send_message(new_entries)
             append_values(
                 "1W3qDsKcfgYtCyzBW3dpUMUmvYCL6OhjdnyUYgzMQsDo",
                 "Sheet1",
@@ -249,8 +251,8 @@ def check_count():
 def run_fun_in_loop():
     print("yes called successfully")
     while(1):
-        start_script()
         if check_count():
+            start_script()
             time.sleep(36000)
         
 def scrape(request):
