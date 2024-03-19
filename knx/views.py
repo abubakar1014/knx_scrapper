@@ -9,6 +9,7 @@ from selenium import webdriver
 import datetime
 import time
 import pandas as pd
+from collections import Counter
 import re
 from Scraper_Project.utils import send_message
 import google.auth
@@ -19,7 +20,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import os
 
-from knx.models import ProfileData, ScraperDetail
+from knx.models import CompaniesData, ScraperDetail, UrlCount
 from knx.utils import configure_webdriver, parse_date
 from knx.utils import start_new_thread
 
@@ -33,36 +34,22 @@ def accept_cookie(driver):
         pass
 
 def load_jobs(driver):
+    data = []
     flag = True
     start_count = 0
-    count = 0
     while(flag):
         try:
             start_count += 1
-            print(f"Load More Count is : {start_count}")
-            start_time = datetime.datetime.now()
+            # print(f"Load More Count is : {start_count}")
             scraped_data = scrap_jobs(driver)
-            user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]    
-            print(f"Total Scrapped Data is : {len(user_profiles)}")
-            ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
-            end_time = datetime.datetime.now()
-            newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
-            if len(newly_objects) > 0:
-                new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if x.phone_number is not "N/A" else x.phone_number,"'"+x.mobile_number if x.mobile_number is not "N/A" else x.mobile_number, x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
-                # send_message(new_entries)
-                append_values(
-                    "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
-                    "Sheet1",
-                    "USER_ENTERED",
-                    new_entries,
-                    )
-                
+            data += scraped_data
             load = driver.find_elements(By.CLASS_NAME, "load_more")
             time.sleep(1)
             load[0].click()
         except Exception as e:
             print(e)
             flag = False
+    return data
 
 def append_data(data, comp):
     data.append(str(comp[1]).strip("+"))
@@ -134,12 +121,10 @@ def scrap_jobs(driver):
         return scrapped_data
 
 def index(request): 
-    # run_fun_in_loop()
-    print("Function called in a seperate thread")
     return render(request, 'home.html')
 
 def profiles(request):
-    profiles = ProfileData.objects.all()
+    profiles = CompaniesData.objects.all()
     return render(request, 'show_data.html', {'profiles':profiles})
     
     
@@ -179,376 +164,110 @@ def append_values(spreadsheet_id, range_name, value_input_option, values):
         print(f"An error occurred: {error}")
         return error
     
-def check_count():
-    # scraper = ScraperDetail.objects.filter()
-    # if not scraper.exists():
-    #     scraper.create(count=0)
-    # driver = configure_webdriver()
-    # driver.get("https://www.knx.org/knx-en/for-professionals/community/partners/index.php")
-    # time.sleep(1)
-    # accept_cookie(driver)
-    # time.sleep(1)
-    # list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
-    # driver.quit()
-    # if ScraperDetail.objects.filter(count=list_count).exists():
-    #     return False
-    # ScraperDetail.objects.all().update(count=list_count)
-    
-    
-    return True
+def check_count(driver, link, all):
+    driver.get(link)
+    time.sleep(1)
+    accept_cookie(driver)
+    time.sleep(1)
+    list_count = driver.find_element(By.CLASS_NAME, "total-selected").find_element(By.TAG_NAME, "b").text
+    if all:
+        if UrlCount.objects.filter(count=list_count, url=link).exists():
+            return False
+        UrlCount.objects.all().update(count=list_count, url=link)
+        return True
+    else:
+        if ScraperDetail.objects.filter(count=list_count, url=link).exists():
+            return False
+        ScraperDetail.objects.filter(url=link).update(count=list_count, url=link)
+        return True
 
 def sort_qualification(driver):
-    load_jobs(driver)
+    data = []
+    start_time = datetime.datetime.now()
+    scraped_data = load_jobs(driver)
+    data += scraped_data
     driver.execute_script("window.scrollTo(0, 0);")
     btn = driver.find_elements(By.CLASS_NAME, "dropdown-toggle")
     btn[1].click()
     fields = driver.find_elements(By.CLASS_NAME, "dropdown-menu")[-1]
-    fields.find_elements(By.TAG_NAME, "a")[1].click()
-    load_jobs(driver)
+    fields.find_elements(By.TAG_NAME, "a")[-1].click()
+    scraped_data = load_jobs(driver)
+    data += scraped_data
     driver.execute_script("window.scrollTo(0, 0);")
-
-def start_script():
-    try:
-        driver = configure_webdriver(True)
-        driver.maximize_window()
-        url = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
-        driver.get(url)
-        accept_cookie(driver)
-        load_jobs(driver)
-        start_time = datetime.datetime.now()
-        scraped_data = scrap_jobs(driver)
-        driver.quit()
-        user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in scraped_data]    
-        print(f"Total Scrapped Data is : {len(user_profiles)}")
-        ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
-        end_time = datetime.datetime.now()
-        newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
-        if len(newly_objects) > 0:
-            new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if x.phone_number is not "N/A" else x.phone_number,"'"+x.mobile_number if x.mobile_number is not "N/A" else x.mobile_number, x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
-            send_message(new_entries)
-            append_values(
-                "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
-                "Sheet1",
-                "USER_ENTERED",
-                new_entries,
-                )
-            print(f"Saved in database objects are : {newly_objects.count()}")
-            print("SCRAPING_ENDED")
+    unique_entries = {}
+    for sublist in data:
+        key = tuple(sublist[i] for i in [0, 3])
+        fourth_element = sublist[3]
+        sixth_element = sublist[6]
+        if key not in unique_entries:
+            unique_entries[key] = sublist
         else:
-            print("SCRAPING_ENDED")
-        if check_count():
-            urls = [
-                    "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=148",
-                   
-                    ]
-            print(f"Total Queries are : {len(urls)}")
-            for count, url in enumerate(urls):
-                print(f"Query number {count + 1} running")
-                driver = configure_webdriver(True)
-                driver.get(url)
-                accept_cookie(driver)
-                sort_qualification(driver)
-                driver.quit()
-                print("SCRAPING_ENDED")
-        else:
-            print("Count not increased so scrapper is finished")
-    except Exception as e:
-        print(e)
+            if "http" not in sixth_element and "http" in unique_entries[key][6]:
+                unique_entries[key] = sublist
+            elif "http" not in sixth_element and "http" not in unique_entries[key][6]:
+                continue
+    unique_comp = list(unique_entries.values())
+    for x in unique_comp:
+        phone = x[3]
+        mobile = x[4]
+        if '+' in phone:
+            x[3]= "'"+phone
+        if '+' in mobile:
+            x[4]= "'"+mobile
+    
+    # user_profiles = [ProfileData(company_name=profile[0], owner_name=profile[1], address=profile[2], phone_number=profile[3], mobile_number=profile[4], website=profile[5], email=profile[6], location=profile[7], city=profile[8], country=profile[9]) for profile in unique_comp]    
+    # print(f"Total Scrapped Data is : {len(user_profiles)}")
+    # ProfileData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
+    # time.sleep(5)
+    # end_time = datetime.datetime.now()
+    # newly_objects = ProfileData.objects.filter(created_at__range=(start_time, end_time))
+    # if len(newly_objects) > 0:
+    #     new_entries = [[x.company_name,x.owner_name,x.address,"'"+x.phone_number if x.phone_number != "N/A" else x.phone_number,"'"+x.mobile_number if x.mobile_number != "N/A" else x.mobile_number, x.website,x.email,x.location,x.city,x.country,parse_date(x.created_at)]for x in newly_objects]
+    #     # send_message(new_entries)
+    #     append_values(
+    #         "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+    #         "Sheet1",
+    #         "USER_ENTERED",
+    #         new_entries,
+    #         )
+    append_values(
+            "1dfjWG-rWG1J6_hFA8QIOQzRCALE_eTZlBlLG5xkDcYU",
+            "Sheet1",
+            "USER_ENTERED",
+            unique_comp,
+            )
 
-@start_new_thread        
-def run_fun_in_loop():
-    print("yes called successfully")
-    while(1):
-        start_script()
-        time.sleep(36000)
+# def start_script():
+#     try:
+#         driver = configure_webdriver()
+#         scraper = UrlCount.objects.filter()
+#         if not scraper.exists():
+#             scraper.create(count=0)
+#         link = "https://www.knx.org/knx-en/for-professionals/community/partners/index.php"
+#         if check_count(driver, link, True):
+#             driver.quit()
+#             links = ScraperDetail.objects.all().only('url').values() #Uzair check kr lena y proper working kr ra h k ni 
+#             for count, link in enumerate(links):
+#                 if count > 0:
+#                     driver = configure_webdriver()
+#                     if check_count(driver, link["url"], False):
+#                         print(f"\n\n\n\n\nQuery number {count + 1} running\n\n\n\n")
+#                         driver.get(link["url"])
+#                         accept_cookie(driver)
+#                         sort_qualification(driver)
+#                         print("SCRAPING_ENDED")
+#                     driver.quit()
+#     except Exception as e:
+#         print(e)
+
+# @start_new_thread        
+# def run_fun_in_loop():
+#     print("yes called successfully")
+#     while(1):
+#         start_script()
+#         time.sleep(36000)
         
-def scrape(request):
-    run_fun_in_loop()
-    print("Function called in a seperate thread")
-    return redirect('index')
-
-
-
-#Ali Waly Links
-
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=148",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=193",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=112",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=178",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=149",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=122",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=6",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=114",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=246",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=150",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=123",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=134",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=179",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=151",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=37",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=31",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=206",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=180",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=207",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=194",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=7",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=135",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=124",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=50",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=195",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=181",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=72",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=9",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=87",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=164",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=208",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=115",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=196",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=32",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=11",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=136",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=38",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=125",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=209",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=74",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=217",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=214",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=53",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=182",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=153",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=126",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=152",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=89",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=99",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=100",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=137",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=165",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=197",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=154",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=12",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=166",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=167",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=247",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=77",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=198",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=155",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=55",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=199",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=14",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=138",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=168",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=200",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=15",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=39",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=201",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=245",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=127",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=33",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=101",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=183",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=40",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=184",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=210",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=156",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=116",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=128",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=16",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=139",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=140",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=57",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=34",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=157",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=129",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=17",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=169",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=158",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=185",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=108",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=102",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=130",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=103",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=141",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=159"
-
-
-
-# My Links
-
-
-
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=170",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=186",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=29",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=187",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=20",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=90",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=142",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=60",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=211",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=202",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=143",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=144",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=118",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=160",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=203",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=82",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=41",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=91",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=249",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=188",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=36",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=92",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=131",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=161",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=42",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=132",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=21",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=105",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=93",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=109",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=110",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=111",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=94",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=25",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=229",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=83",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=44",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=189",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=65",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=252",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=145",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=162",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=171",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=67",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=95",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=30",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=84",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=172",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=173",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=174",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=204",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=97",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=230",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=241",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=146",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=205",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=46",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=190",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=191",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=106",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=68",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=69",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=85",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=175",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=47",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=163",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=176",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=120",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=133",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=121",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=147",
-# "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=177",
-
-
-
-
-
-
-
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=193",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=112",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=178",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=149",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=122",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=6",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=114",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=246",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=150",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=123",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=134",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=179",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=151",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=37",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=31",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=206",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=180",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=207",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=194",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=7",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=135",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=124",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=50",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=195",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=181",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=72",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=9",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=87",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=164",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=208",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=115",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=196",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=32",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=11",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=136",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=38",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=125",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=209",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=74",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=217",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=214",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=53",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=182",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=153",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=126",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=152",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=89",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=99",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=100",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=137",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=165",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=197",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=154",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=12",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=166",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=167",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=247",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=77",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=198",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=155",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=55",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=199",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=14",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=138",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=168",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=200",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=15",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=39",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=201",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=245",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=127",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=33",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=101",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=183",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=40",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=184",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=210",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=156",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=116",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=128",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=16",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=139",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=140",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=57",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=34",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=157",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=129",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=17",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=169",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=158",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=185",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=108",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=102",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=130",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=103",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=141",
-#                     "https://www.knx.org/knx-en/for-professionals/community/partners/index.php?country=159"
+# def scrape(request):
+#     run_fun_in_loop()
+#     print("Function called in a seperate thread")
+#     return redirect('index')

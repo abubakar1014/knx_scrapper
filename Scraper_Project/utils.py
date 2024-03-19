@@ -1,9 +1,11 @@
 from slack.errors import SlackApiError
 from slack import WebClient
-SLACK_API_TOKEN = "xoxb-6572192356949-6601582477027-eZzc5s7J76A1OTO4zlUCI08F"
+# SLACK_API_TOKEN = "xoxb-6572192356949-6601582477027-eZzc5s7J76A1OTO4zlUCI08F"
+SLACK_API_TOKEN = "xoxb-6574189581427-6633200010276-HCEy0DxjZjVXYYSxULHs4eOc"
+
 
 def template_view(new_entries):
-    fields = ["company_name", "owner_name", "address", "phone_number", "mobile_number", "website", "email", "location", "city", "country", "date"]
+    fields = ["uid", "id", "salutation_id", "stars", "stars_feedback", "stars_projects", "stars_engagement", "stars_tools", "stars_knowledge", "score_feedback", "score_projects", "score_engagement", "score_tools", "score_knowledge", "score", "visible", "visible_list", "visible_map", "national_group_visible", "username", "firstname", "lastname", "company", "phone", "mobile", "street", "housenumber", "zipcode", "city", "country_name", "vat", "email", "website", "language", "longitude", "latitude", "communication_journal", "communication_journal_language_id", "country_id"]
     greet = ":robot_face: *Scraping Status Report* :arrows_counterclockwise: \n *New Companies*\n"
     flds = ""
 
@@ -16,7 +18,7 @@ def template_view(new_entries):
     note = "If you have any questions or concerns, feel free to reach out. Let's keep those scrapers running smoothly! :rocket:"
     return str(greet) + str(flds) + str(note)
 
-def send_message(new_entries, channel='#new-companies-updates'):
+def send_message(new_entries, channel='#knx-scraping-updates'):
     client = WebClient(token=SLACK_API_TOKEN)
     template = template_view(new_entries)
     try:
