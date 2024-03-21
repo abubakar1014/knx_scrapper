@@ -13,6 +13,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from selenium.webdriver.common.by import By
 from knx.utils import configure_webdriver
+from knx.models import UrlCount
 import os
 
 def append_values(spreadsheet_id, range_name, value_input_option, values):
@@ -97,7 +98,7 @@ def start_script():
             "qualification": "total",
         }
 
-        total_count = 122216
+        total_count = UrlCount.objects.first().count
         total_loop = int(total_count/20)
         total_loop += 2
         increment_count = 0
@@ -160,18 +161,12 @@ def start_script():
                     country_name=COUNTRIES.get(record[29], "N/A")
                 ) for record in real_records
             ]
-            # print(user_profiles)
-            # import pdb
-            # pdb.set_trace()
-            # except:
-            # [print(i[29]) for i in real_records]
             CompaniesData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
             time.sleep(5)
             end_time = datetime.datetime.now()
             newly_objects = CompaniesData.objects.filter(created_at__range=(start_time, end_time))
             if len(newly_objects) > 0:
-                # import pdb
-                # pdb.set_trace()
+                start_time = datetime.datetime.now()
                 new_entries = [
                     [
                         x.uid,
@@ -213,6 +208,7 @@ def start_script():
                         x.communication_journal,
                         x.communication_journal_language_id,
                         x.country_id,
+                        start_time.strftime("%Y-%m-%d"),
                     ] for x in newly_objects
                 ]
                 print("sending message on slack")
@@ -259,9 +255,9 @@ def run_fun_in_loop():
     try:
         print("yes called successfully")
         while(1):
-            if check_count():
+            # if check_count():
                 start_script()
-                time.sleep(36000)
+                time.sleep(3600)
     except Exception as e:
         print(e)
         
