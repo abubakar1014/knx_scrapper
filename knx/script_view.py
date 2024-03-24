@@ -1,7 +1,7 @@
 import time
 import requests
 import datetime
-from Scraper_Project.utils import send_message
+from Scraper_Project.utils import send_message,send_message_error
 from knx.utils import start_new_thread, COUNTRIES
 from django.shortcuts import redirect
 from .models import CompaniesData, UrlCount
@@ -14,6 +14,7 @@ from google.oauth2.credentials import Credentials
 from selenium.webdriver.common.by import By
 from knx.utils import configure_webdriver
 from knx.models import UrlCount
+from django.utils import timezone
 import os
 
 def append_values(spreadsheet_id, range_name, value_input_option, values):
@@ -97,13 +98,20 @@ def start_script():
             "per_page": "20",
             "qualification": "total",
         }
-        total_count = UrlCount.objects.first().count
+        response = requests.get(
+            'https://www.knx.org/knx-en/for-professionals/community/partners/index.php',
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            )
+        json_response = response.json() 
+        total_count = int(json_response['total'])   
         total_loop = int(total_count/20)
         total_loop += 2
         increment_count = 0
         real_records = []
         for x in range(total_loop):
-            start_time = datetime.datetime.now()
+            start_time = timezone.now()
             increment_count += 20
             print(increment_count)
             params["per_page"] = increment_count
@@ -116,8 +124,6 @@ def start_script():
             json_response = response.json() 
             for record in json_response["rows"]:  
                 real_records.append(list(record.values()))
-            # try:
-            # [print(record[22]) for record in real_records]
             user_profiles = [
                 CompaniesData(
                     uid=record[0],
@@ -163,7 +169,7 @@ def start_script():
             ]
             CompaniesData.objects.bulk_create(user_profiles, ignore_conflicts=True, batch_size=500)
             time.sleep(5)
-            end_time = datetime.datetime.now()
+            end_time = timezone.now()
             newly_objects = CompaniesData.objects.filter(created_at__range=(start_time, end_time))
             if len(newly_objects) > 0:
                 start_time = datetime.datetime.now()
@@ -212,14 +218,17 @@ def start_script():
                     ] for x in newly_objects
                 ]
                 print("sending message on slack")
-                send_message(new_entries)
+                # send_message(new_entries)
+                
                 append_values(
                     "1OOSyu6IPaUJt9Y8SQZgLIVXIfnZChGoN8S1P24dTk8Q",
                     "Sheet1",
                     "USER_ENTERED",
                     new_entries,
                 )
+            send_message_error(f'On Page number: {increment_count}')
     except Exception as e:
+        send_message_error(f'Error Occured: {e}')
         print(e)
 
 def accept_cookie(driver):
@@ -257,6 +266,7 @@ def run_fun_in_loop():
         while(1):
             # if check_count():
                 start_script()
+                send_message_error(f'Cycle completed successfully the system will be resumed in an hour')
                 time.sleep(3600)
     except Exception as e:
         print(e)

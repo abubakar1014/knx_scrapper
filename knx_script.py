@@ -51,7 +51,7 @@ total_loop += 2
 increment_count = 120000
 real_records = []
 for x in range(total_loop):
-    increment_count += 20
+    increment_count += 60
     params["per_page"] = increment_count
     response = requests.get(
     'https://www.knx.org/knx-en/for-professionals/community/partners/index.php',

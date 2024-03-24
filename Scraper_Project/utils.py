@@ -5,7 +5,7 @@ SLACK_API_TOKEN = "xoxb-6574189581427-6633200010276-HCEy0DxjZjVXYYSxULHs4eOc"
 
 
 def template_view(new_entries):
-    fields = ["uid", "id", "salutation_id", "stars", "stars_feedback", "stars_projects", "stars_engagement", "stars_tools", "stars_knowledge", "score_feedback", "score_projects", "score_engagement", "score_tools", "score_knowledge", "score", "visible", "visible_list", "visible_map", "national_group_visible", "username", "firstname", "lastname", "company", "phone", "mobile", "street", "housenumber", "zipcode", "city", "country_name", "vat", "email", "website", "language", "longitude", "latitude", "communication_journal", "communication_journal_language_id", "country_id"]
+    fields = ["uid", "id", "salutation_id", "stars", "stars_feedback", "stars_projects", "stars_engagement", "stars_tools", "stars_knowledge", "score_feedback", "score_projects", "score_engagement", "score_tools", "score_knowledge", "score", "visible", "visible_list", "visible_map", "national_group_visible", "username", "firstname", "lastname", "company", "phone", "mobile", "street", "housenumber", "zipcode", "city", "country_name", "vat", "email", "website", "language", "longitude", "latitude", "communication_journal", "communication_journal_language_id", "country_id","Created_at"]
     greet = ":robot_face: *Scraping Status Report* :arrows_counterclockwise: \n *New Companies*\n"
     flds = ""
 
@@ -20,8 +20,18 @@ def template_view(new_entries):
 
 def send_message(new_entries, channel='#knx-scraping-updates'):
     client = WebClient(token=SLACK_API_TOKEN)
+    # new_entries = [[i for i in entry if i] for entry in new_entries]
     template = template_view(new_entries)
     try:
         client.chat_postMessage(channel=channel, text=f"{template}")
+    except SlackApiError as e:
+        print(f"Got an error: {e.response['error']}")
+
+
+def send_message_error(message, channel='#knx-scraping-updates'):
+    client = WebClient(token=SLACK_API_TOKEN)
+    # template = template_view(new_entries)
+    try:
+        client.chat_postMessage(channel=channel, text=f"{message}")
     except SlackApiError as e:
         print(f"Got an error: {e.response['error']}")
