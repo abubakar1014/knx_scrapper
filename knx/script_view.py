@@ -97,7 +97,6 @@ def start_script():
             "per_page": "20",
             "qualification": "total",
         }
-
         total_count = UrlCount.objects.first().count
         total_loop = int(total_count/20)
         total_loop += 2
@@ -118,6 +117,7 @@ def start_script():
             for record in json_response["rows"]:  
                 real_records.append(list(record.values()))
             # try:
+            # [print(record[22]) for record in real_records]
             user_profiles = [
                 CompaniesData(
                     uid=record[0],
@@ -214,7 +214,7 @@ def start_script():
                 print("sending message on slack")
                 send_message(new_entries)
                 append_values(
-                    "1W3qDsKcfgYtCyzBW3dpUMUmvYCL6OhjdnyUYgzMQsDo",
+                    "1OOSyu6IPaUJt9Y8SQZgLIVXIfnZChGoN8S1P24dTk8Q",
                     "Sheet1",
                     "USER_ENTERED",
                     new_entries,
