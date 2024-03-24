@@ -13,7 +13,6 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from selenium.webdriver.common.by import By
 from knx.utils import configure_webdriver
-from knx.models import UrlCount
 from django.utils import timezone
 import os
 
@@ -108,12 +107,16 @@ def start_script():
         total_count = int(json_response['total'])   
         total_loop = int(total_count/20)
         total_loop += 2
-        increment_count = 0
+        increment_count = UrlCount.objects.all().first().count
         real_records = []
         for x in range(total_loop):
+            c = UrlCount.objects.all().first()
             start_time = timezone.now()
             increment_count += 20
             print(increment_count)
+            a =  UrlCount.objects.all().first()
+            a.count = increment_count
+            a.save()
             params["per_page"] = increment_count
             response = requests.get(
             'https://www.knx.org/knx-en/for-professionals/community/partners/index.php',
@@ -263,10 +266,18 @@ def check_count():
 def run_fun_in_loop():
     try:
         print("yes called successfully")
+        a = UrlCount.objects.all()
+        if a :
+            pass
+        else:
+            UrlCount.objects.create(count=3660 )
         while(1):
             # if check_count():
                 start_script()
                 send_message_error(f'Cycle completed successfully the system will be resumed in an hour')
+                a =  UrlCount.objects.all().first()
+                a.count = 0
+                a.save()
                 time.sleep(3600)
     except Exception as e:
         print(e)
