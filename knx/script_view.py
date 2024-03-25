@@ -269,10 +269,11 @@ def run_fun_in_loop():
         a = UrlCount.objects.all()
         if a :
             a =  UrlCount.objects.all().first()
-            a.count = a.count - 20
+            sum = a.count
+            a.count = sum - 20
             a.save()
         else:
-            UrlCount.objects.create(count=3660 )
+            UrlCount.objects.create(count=14860)
         while(1):
             # if check_count():
                 start_script()
