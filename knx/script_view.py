@@ -268,7 +268,9 @@ def run_fun_in_loop():
         print("yes called successfully")
         a = UrlCount.objects.all()
         if a :
-            pass
+            a =  UrlCount.objects.all().first()
+            a.count = a.count - 20
+            a.save()
         else:
             UrlCount.objects.create(count=3660 )
         while(1):
