@@ -104,13 +104,20 @@ def start_script():
             headers=headers,
             )
         json_response = response.json() 
-        total_count = int(json_response['total'])   
+        total_count = int(json_response['total']) 
+        total_comp_count = UrlCount.objects.all().first().count
+        if total_count <= total_comp_count*20:
+            a =  UrlCount.objects.all().first()
+            a.count = 0
+            a.save()
+            total_comp_count = 0
+            
         total_loop = int(total_count/20)
         total_loop += 2
-        increment_count = UrlCount.objects.all().first().count
+        increment_count = total_comp_count
         real_records = []
         for x in range(total_loop):
-            c = UrlCount.objects.all().first()
+            # c = UrlCount.objects.all().first()
             start_time = timezone.now()
             increment_count += 20
             print(increment_count)
@@ -221,7 +228,7 @@ def start_script():
                     ] for x in newly_objects
                 ]
                 print("sending message on slack")
-                # send_message(new_entries)
+                send_message(new_entries)
                 
                 append_values(
                     "1OOSyu6IPaUJt9Y8SQZgLIVXIfnZChGoN8S1P24dTk8Q",
@@ -231,7 +238,7 @@ def start_script():
                 )
             send_message_error(f'On Page number: {increment_count}')
     except Exception as e:
-        send_message_error(f'Error Occured: {e}')
+        # send_message_error(f'Error Occured: {e}')
         print(e)
 
 def accept_cookie(driver):
@@ -270,18 +277,16 @@ def run_fun_in_loop():
         if a :
             a =  UrlCount.objects.all().first()
             sum = a.count
-            a.count = sum - 20
-            a.save()
+            if sum >= 20:
+                a.count = sum - 20
+                a.save()
         else:
-            UrlCount.objects.create(count=14860)
+            UrlCount.objects.create(count=0)
         while(1):
             # if check_count():
                 start_script()
-                send_message_error(f'Cycle completed successfully the system will be resumed in an hour')
-                a =  UrlCount.objects.all().first()
-                a.count = 0
-                a.save()
-                time.sleep(3600)
+                send_message_error(f'Cycle completed successfully the system will be resumed soon')
+                time.sleep(20)
     except Exception as e:
         print(e)
         
