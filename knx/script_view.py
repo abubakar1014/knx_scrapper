@@ -228,7 +228,7 @@ def start_script():
                     ] for x in newly_objects
                 ]
                 print("sending message on slack")
-                send_message(new_entries)
+                send_message(new_entries,"#knx-partners-updates")
                 
                 append_values(
                     "1OOSyu6IPaUJt9Y8SQZgLIVXIfnZChGoN8S1P24dTk8Q",
