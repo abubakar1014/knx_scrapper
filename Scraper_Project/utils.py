@@ -18,7 +18,7 @@ def template_view(new_entries):
     note = "If you have any questions or concerns, feel free to reach out. Let's keep those scrapers running smoothly! :rocket:"
     return str(greet) + str(flds) + str(note)
 
-def send_message(new_entries, channel='#knx-scraping-updates'):
+def send_message(new_entries, channel="#knx-partners-updates"):
     client = WebClient(token=SLACK_API_TOKEN)
     # new_entries = [[i for i in entry if i] for entry in new_entries]
     template = template_view(new_entries)
