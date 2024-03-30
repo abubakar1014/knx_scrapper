@@ -294,3 +294,6 @@ def scrape(request):
     run_fun_in_loop()
     print("Function called in a seperate thread")
     return redirect('index')
+
+
+run_fun_in_loop()
