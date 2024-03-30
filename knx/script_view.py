@@ -238,7 +238,7 @@ def start_script():
                 )
             send_message_error(f'On Page number: {increment_count}')
     except Exception as e:
-        # send_message_error(f'Error Occured: {e}')
+        send_message_error(f'Error Occured: {e}')
         print(e)
 
 def accept_cookie(driver):
