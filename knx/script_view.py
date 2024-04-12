@@ -276,9 +276,9 @@ def run_fun_in_loop():
         a = UrlCount.objects.all()
         if a :
             a =  UrlCount.objects.all().first()
-            sum = a.count
-            if sum >= 20:
-                a.count = sum - 20
+            Sum = a.count
+            if Sum >= 20:
+                a.count = Sum - 20
                 a.save()
         else:
             UrlCount.objects.create(count=0)
