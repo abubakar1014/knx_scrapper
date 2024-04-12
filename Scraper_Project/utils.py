@@ -1,7 +1,7 @@
 from slack.errors import SlackApiError
 from slack import WebClient
 # SLACK_API_TOKEN = "xoxb-6572192356949-6601582477027-eZzc5s7J76A1OTO4zlUCI08F"
-SLACK_API_TOKEN = "xoxb-6574189581427-6633200010276-HCEy0DxjZjVXYYSxULHs4eOc"
+SLACK_API_TOKEN = "xoxb-6508024503380-6950337167088-AXzrH1iljU9yZeHCtakazA79"
 
 
 def template_view(new_entries):
